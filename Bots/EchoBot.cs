@@ -12,14 +12,31 @@ namespace Microsoft.BotBuilderSamples.Bots
 {
     public class EchoBot : ActivityHandler
     {
+        ContestTask NewTask = new ContestTask();
         protected override async Task OnMessageActivityAsync(ITurnContext<IMessageActivity> turnContext, CancellationToken cancellationToken)
         {
             var replyText = $"Messages: {turnContext.Activity.Text}";
-            var result = CSharpCompiler.BuildProject(out bool error, turnContext.Activity.Text);
-            if (!error)
+            string result = "";
+            switch (turnContext.Activity.Text)
             {
-                result = CSharpCompiler.RunAndCheckProject();
+                case "/random":
+                    NewTask = new ContestTask();
+                    result = NewTask.Condition;
+                    CSharpCompiler.NowTask = NewTask;
+                    break;
+                default:
+                    CSharpCompiler.BuildProject(out bool error, turnContext.Activity.Text);
+                    if (!error)
+                    {
+                        result = CSharpCompiler.RunAndCheckProject();
+                    }
+                    else
+                    {
+                        result = "CE";
+                    }
+                    break;
             }
+
             var reply = MessageFactory.Text(result, result);
             await turnContext.SendActivityAsync(reply, cancellationToken);
         }

@@ -14,13 +14,15 @@ using Microsoft.Build.Evaluation;
 using System.Reflection;
 using System.Diagnostics;
 using System.Runtime.Loader;
+using System.IO.Packaging;
 namespace Microsoft.BotBuilderSamples.Bots
 {
     public class CSharpCompiler
     {
-        static string path = @"D:\home\Test";
-        static string pathToPowershell = @"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe";
 
+        public static ContestTask NowTask;
+        static string path = @"D:\home\Test";
+        static string pathToPowershell = @"D:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe";
         public static string[] RunCommands(params string[] cmds)
         {
 
@@ -51,14 +53,15 @@ namespace Microsoft.BotBuilderSamples.Bots
             process.WaitForExit();
             return result.Split('\n');
         }
-        public static string[] RunProject(out bool IsHasError, params string[] cmds)
+        public static string RunProject(out bool IsHasError, string input)
         {
 
             var process = new Process()
             {
                 StartInfo = new ProcessStartInfo
                 {
-                    FileName = pathToPowershell,
+                    //FileName = path + @"\bin\Debug\net5.0\Test.exe",
+                    FileName = path + @"\bin\Debug\netcoreapp3.1\Test.exe",
                     RedirectStandardOutput = true,
                     RedirectStandardInput = true,
                     RedirectStandardError = true,
@@ -71,18 +74,14 @@ namespace Microsoft.BotBuilderSamples.Bots
             {
                 if (sw.BaseStream.CanWrite)
                 {
-                    foreach (var item in cmds)
-                    {
-                        var cmd = item.Replace("\"", "\\\"");
-                        sw.WriteLine(cmd);
-                    }
+                    sw.WriteLine(input);
                 }
             }
             string error = process.StandardError.ReadToEnd();
             string result = process.StandardOutput.ReadToEnd();
-            if (process.StandardError.ReadToEnd() != string.Empty)
+            if (error.Contains("error") || error.Contains("exception"))
             {
-                result = error;
+                result += "RE";
                 IsHasError = true;
             }
             else
@@ -90,23 +89,46 @@ namespace Microsoft.BotBuilderSamples.Bots
                 IsHasError = false;
             }
             process.WaitForExit();
-            return result.Split('\n');
+            return result;
         }
         public static string RunAndCheckProject()
         {
-            var result = RunProject(out bool error, path + @"\bin\Debug\net5.0\Test.exe");
-            //var result = RunProject(out bool error, path + @"\bin\Debug\netcoreapp3.1\Test.exe");
-            string endresult = "";
-            if (error)
+            bool error = true;
+            int errorNum = 0;
+            string Check = "";
+            bool Rerror = false;
+            for (int i = 0; i < NowTask.Input.Count; i++)
             {
-                endresult = String.Join('\n', result);
+                string progOutput = RunProject(out Rerror, NowTask.Input[i]).TrimEnd('\n').TrimEnd();
+
+                if (progOutput != NowTask.Output[i] || Rerror)
+                {
+                    errorNum = i + 1;
+                    error = true;
+                    Check = String.Join("\n", "(" + progOutput + ")" + "   !=   " + "(" + NowTask.Output[i] + ")");
+                    break;
+                }
+                if (i == NowTask.Input.Count - 1)
+                    error = false;
+                Check += String.Join("\n", progOutput + "   ==   " + NowTask.Output[i]);
+            }
+            string endresult = "";
+            if (Rerror)
+            {
+                endresult = "RE " + errorNum + "\n";
             }
             else
             {
-                endresult = ParseOutputText(result);
+                if (error)
+                {
+                    endresult = "[WA " + errorNum + "]" + "\n" + Check;
+                }
+                else
+                {
+                    endresult = "Good";
+                }
             }
-
-            return ParseOutputText(result);
+            return endresult;
         }
         public static string ParseOutputText(string[] input)
         {
@@ -146,7 +168,7 @@ namespace Microsoft.BotBuilderSamples.Bots
                 File.WriteAllText(path + "\\Program.cs", sourcecode);
                 Cmds.Clear();
                 Cmds.Add(@"cd " + path);
-                Cmds.Add("dotnet run");
+                Cmds.Add("dotnet build");
                 var process = new Process()
                 {
                     StartInfo = new ProcessStartInfo
@@ -171,11 +193,9 @@ namespace Microsoft.BotBuilderSamples.Bots
                         }
                     }
                 }
-                string error = process.StandardError.ReadToEnd();
                 string result = process.StandardOutput.ReadToEnd();
-                if (error != string.Empty)
+                if (result.Contains("error"))
                 {
-                    result = error;
                     IsHasError = true;
                 }
                 else
