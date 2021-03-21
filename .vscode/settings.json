@@ -1,0 +1,4 @@
+{
+    "appService.defaultWebAppToDeploy": "/subscriptions/388f2fdd-d481-4edf-a69c-a16bde8222d6/resourceGroups/Machine_Learn/providers/Microsoft.Web/sites/cssimple",
+    "appService.deploySubpath": "bin\\Debug\\netcoreapp3.1"
+}

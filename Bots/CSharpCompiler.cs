@@ -18,75 +18,147 @@ namespace Microsoft.BotBuilderSamples.Bots
 {
     public class CSharpCompiler
     {
-        public class CollectibleAssemblyLoadContext : AssemblyLoadContext
-        {
-            public CollectibleAssemblyLoadContext() : base(isCollectible: true)
-            { }
+        static string path = @"D:\home\Test";
+        static string pathToPowershell = @"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe";
 
-            protected override Assembly Load(AssemblyName assemblyName)
-            {
-                return null;
-            }
-        }
-
-        static CSharpCompilation Compilation;
-        public static bool BuildTheCode(string input, out string[] error)
+        public static string[] RunCommands(params string[] cmds)
         {
-            var dotnetCoreDirectory = System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory();
-            error = new string[0];
-            var compilation = CSharpCompilation.Create("LibraryName")
-               .WithOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary))
-               .AddReferences(
-                   MetadataReference.CreateFromFile(typeof(object).GetTypeInfo().Assembly.Location),
-                   MetadataReference.CreateFromFile(typeof(Console).GetTypeInfo().Assembly.Location),
-                   MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "mscorlib.dll")),
-                   MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "netstandard.dll")),
-                   MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "System.Runtime.dll")))
-               .AddSyntaxTrees(ParseThecode(input));
-            Compilation = compilation;
-            if (!compilation.GetDiagnostics().IsEmpty)
+
+            var process = new Process()
             {
-                error = new string[compilation.GetDiagnostics().Length];
-                foreach (var compilerMessage in compilation.GetDiagnostics())
-                    Console.WriteLine(compilerMessage);
-                for (int i = 0; i < error.Length; i++)
+                StartInfo = new ProcessStartInfo
                 {
-                    error[i] = compilation.GetDiagnostics().ToList()[i].ToString();
+                    FileName = pathToPowershell,
+                    RedirectStandardOutput = true,
+                    RedirectStandardInput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
                 }
-                return true;
+            };
+            process.Start();
+            using (StreamWriter sw = process.StandardInput)
+            {
+                if (sw.BaseStream.CanWrite)
+                {
+                    foreach (var item in cmds)
+                    {
+                        var cmd = item.Replace("\"", "\\\"");
+                        sw.WriteLine(cmd);
+                    }
+                }
+            }
+            string result = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            return result.Split('\n');
+        }
+        public static string[] RunProject(out bool IsHasError, params string[] cmds)
+        {
+
+            var process = new Process()
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = pathToPowershell,
+                    RedirectStandardOutput = true,
+                    RedirectStandardInput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                }
+            };
+            process.Start();
+            using (StreamWriter sw = process.StandardInput)
+            {
+                if (sw.BaseStream.CanWrite)
+                {
+                    foreach (var item in cmds)
+                    {
+                        var cmd = item.Replace("\"", "\\\"");
+                        sw.WriteLine(cmd);
+                    }
+                }
+            }
+            string error = process.StandardError.ReadToEnd();
+            string result = process.StandardOutput.ReadToEnd();
+            if (process.StandardError.ReadToEnd() != string.Empty)
+            {
+                result = error;
+                IsHasError = true;
             }
             else
-                return false;
-            // Debug output. In case your environment is different it may show some messages.
-        }
-
-        public static SyntaxTree ParseThecode(string sourcecode)
-        {
-            SyntaxTree snt = CSharpSyntaxTree.ParseText(sourcecode);
-            SyntaxNode snn = snt.GetRoot();
-            return snt;
-        }
-        public static void Run()
-        {
-            using (var memoryStream = new MemoryStream())
             {
-                var emitResult = Compilation.Emit(memoryStream);
-                if (emitResult.Success)
+                IsHasError = false;
+            }
+            process.WaitForExit();
+            return result.Split('\n');
+        }
+        public static string RunAndCheckProject()
+        {
+            string output = "RE";
+
+
+            return output;
+        }
+        public static string ParseOutputText(string[] input)
+        {
+            var listresult = new List<string>(input);
+            string endresult = "";
+            bool startrecord = false;
+            for (int i = 0; i < listresult.Count; i++)
+            {
+                if (i == listresult.Count - 1)
                 {
-                    memoryStream.Seek(0, SeekOrigin.Begin);
-                    var context = new CollectibleAssemblyLoadContext();
-                    var assembly = context.LoadFromStream(memoryStream);
-                    assembly.GetTypes().ToList().ForEach(Console.WriteLine);
-                    assembly.GetTypes().FirstOrDefault().GetMethods().ToList().ForEach(Console.WriteLine);
-                    MethodInfo entryPoint = assembly.GetType("Test.Program").GetMethod("Main");
-                    entryPoint.Invoke(null, new object[] { new string[] { "arg1", "arg2", "etc" } });
-                    context.Unload();
-                    memoryStream.Close();
-                    memoryStream.Dispose();
+                    startrecord = false;
+                    break;
                 }
+                if (startrecord)
+                {
+                    endresult += listresult[i] + "\n";
+                }
+                if (listresult[i].Contains("Test.exe") && !startrecord)
+                {
+                    startrecord = true;
+                }
+            }
+            return endresult;
+        }
+        public static string BuildProject(string sourcecode)
+        {
+            try
+            {
+                if (!Directory.Exists(path))
+                    Directory.CreateDirectory(path);
+                DirectoryInfo dir = new DirectoryInfo(path);
+                List<string> Cmds = new List<string>();
+                Cmds.Add(@"cd " + path);
+                Cmds.Add("dotnet new -i Microsoft.DotNet.Common.ProjectTemplates.3.1");
+                Cmds.Add("dotnet new console --force");
+                RunCommands(Cmds.ToArray());
+                File.WriteAllText(path + "\\Program.cs", sourcecode);
+                Cmds.Clear();
+                Cmds.Add(@"cd " + path);
+                Cmds.Add("dotnet build");
+                RunCommands(Cmds.ToArray());
+
+                var result = RunProject(out bool error, path + @"\bin\Debug\net5.0\Test.exe");
+                //var result = RunProject(out bool error, path + @"\bin\Debug\netcoreapp3.1\Test.exe");
+                string endresult = "";
+                if (error)
+                {
+                    endresult = String.Join('\n', result);
+                }
+                else
+                {
+                    endresult = ParseOutputText(result);
+                }
+
+                return ParseOutputText(result);
+            }
+            catch (Exception e)
+            {
+                return e.HelpLink + "\n" + e.Message + "\n" + e.Source + "\n" + e.StackTrace;
             }
 
         }
-
     }
 }
