@@ -15,16 +15,12 @@ namespace Microsoft.BotBuilderSamples.Bots
         protected override async Task OnMessageActivityAsync(ITurnContext<IMessageActivity> turnContext, CancellationToken cancellationToken)
         {
             var replyText = $"Messages: {turnContext.Activity.Text}";
-            var error = CSharpCompiler.ComplieCode(turnContext.Activity.Text);
-            string errorreply;
-            if (error.Count > 0)
+            string errorreply = "worked";
+            if (CSharpCompiler.BuildTheCode(turnContext.Activity.Text, out string[] error))
                 errorreply = String.Join('\n', error);
             else
-            {
-                errorreply = "No error, good job!\n";
-
-            }
-
+                errorreply = "worked";
+            CSharpCompiler.Run();
             var reply = MessageFactory.Text(errorreply, errorreply);
             await turnContext.SendActivityAsync(reply, cancellationToken);
         }

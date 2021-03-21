@@ -1,104 +1,92 @@
 ﻿using System;
+using System.Globalization;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Microsoft.CodeAnalysis.CSharp;
-using System.CodeDom.Compiler;
 using System.CodeDom;
 using Microsoft.CSharp;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.CodeAnalysis.Emit;
+using Microsoft.Build;
+using Microsoft.Build.Evaluation;
 using System.Reflection;
-
-
-
-
+using System.Diagnostics;
+using System.Runtime.Loader;
 namespace Microsoft.BotBuilderSamples.Bots
 {
     public class CSharpCompiler
     {
-        /// Writen use these link:
-        /// https://laurentkempe.com/2019/02/18/dynamically-compile-and-run-code-using-dotNET-Core-3.0/
-        /// https://stackoverflow.com/questions/826398/is-it-possible-to-dynamically-compile-and-execute-c-sharp-code-fragments
-        /// http://www.blackwasp.co.uk/RuntimeCompilation.aspx
-        /// https://www.youtube.com/watch?v=Kyd-5UzzU2A
-
-
-
-        public static List<string> ComplieCode(string code)
+        public class CollectibleAssemblyLoadContext : AssemblyLoadContext
         {
-            SyntaxTree syntaxTree = CSharpSyntaxTree.ParseText(code);
-            var assemblyName = "TestLibrary";
-            var cop = new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary);
-            CSharpCompilation compilation = CSharpCompilation.Create(
-                assemblyName,
-                new[] { syntaxTree },
-                new MetadataReference[]
-                {
-          MetadataReference.CreateFromFile(typeof(object).Assembly.Location)
-                },
-                cop);
-            CSharpCompilation compilation1 = GenerateCode(code);
-            var assemblyPath = Path.ChangeExtension(Path.GetTempFileName(), "exe");
-            using (var ms = new MemoryStream())
+            public CollectibleAssemblyLoadContext() : base(isCollectible: true)
+            { }
+
+            protected override Assembly Load(AssemblyName assemblyName)
             {
-                // write IL code into memory
-                EmitResult result = compilation1.Emit(ms);
+                return null;
+            }
+        }
 
-                if (!result.Success)
+        static CSharpCompilation Compilation;
+        public static bool BuildTheCode(string input, out string[] error)
+        {
+            var dotnetCoreDirectory = System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory();
+            error = new string[0];
+            var compilation = CSharpCompilation.Create("LibraryName")
+               .WithOptions(new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary))
+               .AddReferences(
+                   MetadataReference.CreateFromFile(typeof(object).GetTypeInfo().Assembly.Location),
+                   MetadataReference.CreateFromFile(typeof(Console).GetTypeInfo().Assembly.Location),
+                   MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "mscorlib.dll")),
+                   MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "netstandard.dll")),
+                   MetadataReference.CreateFromFile(Path.Combine(dotnetCoreDirectory, "System.Runtime.dll")))
+               .AddSyntaxTrees(ParseThecode(input));
+            Compilation = compilation;
+            if (!compilation.GetDiagnostics().IsEmpty)
+            {
+                error = new string[compilation.GetDiagnostics().Length];
+                foreach (var compilerMessage in compilation.GetDiagnostics())
+                    Console.WriteLine(compilerMessage);
+                for (int i = 0; i < error.Length; i++)
                 {
-                    // handle exceptions
-                    IEnumerable<Diagnostic> failures = result.Diagnostics.Where(diagnostic =>
-                        diagnostic.IsWarningAsError ||
-                        diagnostic.Severity == DiagnosticSeverity.Error);
-
-                    foreach (Diagnostic diagnostic in failures)
-                    {
-                        Console.Error.WriteLine("{0}: {1}", diagnostic.Id, diagnostic.GetMessage());
-                    }
+                    error[i] = compilation.GetDiagnostics().ToList()[i].ToString();
                 }
-                else
-                {
-                    // load this 'virtual' DLL so that we can use
-                    ms.Seek(0, SeekOrigin.Begin);
-                    Assembly assembly = Assembly.Load(ms.ToArray());
+                return true;
+            }
+            else
+                return false;
+            // Debug output. In case your environment is different it may show some messages.
+        }
 
-                    // create instance of the desired class and call the desired function
-                    Type type = assembly.GetType("RoslynCompileSample.Writer");
-                    object obj = Activator.CreateInstance(type);
-                    type.InvokeMember("Write",
-                        BindingFlags.Default | BindingFlags.InvokeMethod,
-                        null,
-                        obj,
-                        new object[] { "Hello World" });
+        public static SyntaxTree ParseThecode(string sourcecode)
+        {
+            SyntaxTree snt = CSharpSyntaxTree.ParseText(sourcecode);
+            SyntaxNode snn = snt.GetRoot();
+            return snt;
+        }
+        public static void Run()
+        {
+            using (var memoryStream = new MemoryStream())
+            {
+                var emitResult = Compilation.Emit(memoryStream);
+                if (emitResult.Success)
+                {
+                    memoryStream.Seek(0, SeekOrigin.Begin);
+                    var context = new CollectibleAssemblyLoadContext();
+                    var assembly = context.LoadFromStream(memoryStream);
+                    assembly.GetTypes().ToList().ForEach(Console.WriteLine);
+                    assembly.GetTypes().FirstOrDefault().GetMethods().ToList().ForEach(Console.WriteLine);
+                    MethodInfo entryPoint = assembly.GetType("Test.Program").GetMethod("Main");
+                    entryPoint.Invoke(null, new object[] { new string[] { "arg1", "arg2", "etc" } });
+                    context.Unload();
+                    memoryStream.Close();
+                    memoryStream.Dispose();
                 }
             }
 
         }
-        private static CSharpCompilation GenerateCode(string sourceCode)
-        {
-            var codeString = SourceText.From(sourceCode);
-            var options = CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.CSharp7_3);
-
-            var parsedSyntaxTree = SyntaxFactory.ParseSyntaxTree(codeString, options);
-
-            var references = new MetadataReference[]
-            {
-                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(Console).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(System.Runtime.AssemblyTargetedPatchBandAttribute).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(Microsoft.CSharp.RuntimeBinder.CSharpArgumentInfo).Assembly.Location),
-            };
-
-            return CSharpCompilation.Create("Hello.dll",
-                new[] { parsedSyntaxTree },
-                references: references,
-                options: new CSharpCompilationOptions(OutputKind.ConsoleApplication,
-                    optimizationLevel: OptimizationLevel.Release,
-                    assemblyIdentityComparer: DesktopAssemblyIdentityComparer.Default));
-        }
-
 
     }
 }
