@@ -94,10 +94,19 @@ namespace Microsoft.BotBuilderSamples.Bots
         }
         public static string RunAndCheckProject()
         {
-            string output = "RE";
+            var result = RunProject(out bool error, path + @"\bin\Debug\net5.0\Test.exe");
+            //var result = RunProject(out bool error, path + @"\bin\Debug\netcoreapp3.1\Test.exe");
+            string endresult = "";
+            if (error)
+            {
+                endresult = String.Join('\n', result);
+            }
+            else
+            {
+                endresult = ParseOutputText(result);
+            }
 
-
-            return output;
+            return ParseOutputText(result);
         }
         public static string ParseOutputText(string[] input)
         {
@@ -122,7 +131,7 @@ namespace Microsoft.BotBuilderSamples.Bots
             }
             return endresult;
         }
-        public static string BuildProject(string sourcecode)
+        public static string BuildProject(out bool IsHasError, string sourcecode)
         {
             try
             {
@@ -137,28 +146,50 @@ namespace Microsoft.BotBuilderSamples.Bots
                 File.WriteAllText(path + "\\Program.cs", sourcecode);
                 Cmds.Clear();
                 Cmds.Add(@"cd " + path);
-                Cmds.Add("dotnet build");
-                RunCommands(Cmds.ToArray());
-
-                var result = RunProject(out bool error, path + @"\bin\Debug\net5.0\Test.exe");
-                //var result = RunProject(out bool error, path + @"\bin\Debug\netcoreapp3.1\Test.exe");
-                string endresult = "";
-                if (error)
+                Cmds.Add("dotnet run");
+                var process = new Process()
                 {
-                    endresult = String.Join('\n', result);
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = pathToPowershell,
+                        RedirectStandardOutput = true,
+                        RedirectStandardInput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                    }
+                };
+                process.Start();
+                using (StreamWriter sw = process.StandardInput)
+                {
+                    if (sw.BaseStream.CanWrite)
+                    {
+                        foreach (var item in Cmds)
+                        {
+                            var cmd = item.Replace("\"", "\\\"");
+                            sw.WriteLine(cmd);
+                        }
+                    }
+                }
+                string error = process.StandardError.ReadToEnd();
+                string result = process.StandardOutput.ReadToEnd();
+                if (error != string.Empty)
+                {
+                    result = error;
+                    IsHasError = true;
                 }
                 else
                 {
-                    endresult = ParseOutputText(result);
+                    IsHasError = false;
                 }
-
-                return ParseOutputText(result);
+                process.WaitForExit();
+                return String.Join('\n', result);
             }
             catch (Exception e)
             {
+                IsHasError = true;
                 return e.HelpLink + "\n" + e.Message + "\n" + e.Source + "\n" + e.StackTrace;
             }
-
         }
     }
 }
