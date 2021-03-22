@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation. All rights reserved.
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
 using System;
@@ -24,15 +24,22 @@ namespace Microsoft.BotBuilderSamples.Bots
                     result = NewTask.Condition;
                     CSharpCompiler.NowTask = NewTask;
                     break;
+                case "/step_by_step":
+                    string step = "🔹 Step-by-step instruction 🔹\n 1. First of all, write /random, after which you will receive the task.\n 2. Carefully read the condition, input parameters, and output data.\n 3. Write the code in Visual Studio or any other program that supports C#. Check that the code runs accurately and that it works correctly.\n 4. Send the bot /code and after his response 'Input your code' copy the entire code you have written (do not forget the using directives) and send it. \n5. Wait for an answer. Testing may take a while, so take your time. \n6. Look at the answer you received. If you forget about symbols, then call /abbreviations. \n7. Relax or continue solving problems (you can call /mood and watch Kermit's pictures)";
+                    await turnContext.SendActivityAsync(step);
+                    break;
+                case "/abbreviations":
+                    string abbrev = "🔹 All abbreviations 🔹\n\n\n\n   CE - Compilation Error (check that you have not lost the semicolon anywhere, that your code has been copied in full, with all namespaces, classes and using). \n\n\n\n  WA i - Wrong Answer on ‘i’ test (then the result of the program and the answer that should have been written).\n\n\n\n   Good - Everything is great, you have completed the task correctly and passed all the tests.";
+                    await turnContext.SendActivityAsync(abbrev);
+                    break;
                 case "/help":
-                    string helper = "/random � random task" + Environment.NewLine + "/code - send the code to check it" + Environment.NewLine  + "/mood - shows a picture of Kermit";
+                    string helper = "/random – random task \n\n\n\n/code - send the code to check it \n\n\n\n/mood - shows a picture of Kermit\n\n\n\n/step_by_step – shows step-by-step instruction \n\n\n\n/abbreviations – transcripts of the bot's responses \n\n\n\n";
                     await turnContext.SendActivityAsync(helper);
                     break;
                 case "/mood":
                     var pic = MessageFactory.Text("", "");
                     var PhotoAttach = new Attachment()
                     {
-                        Name = "maxresdefault.jpg",
                         ContentType = "image/jpg",
                         ContentUrl = MoodPhoto()
                     };
@@ -62,7 +69,6 @@ namespace Microsoft.BotBuilderSamples.Bots
             var reply = MessageFactory.Text(welcomeText, welcomeText);
             var PhotoAttach = new Attachment()
             {
-                Name = "maxresdefault.jpg",
                 ContentType = "image/jpg",
                 ContentUrl = "https://i.ytimg.com/vi/PtXVF9o8DiA/maxresdefault.jpg"
             };
@@ -89,7 +95,11 @@ namespace Microsoft.BotBuilderSamples.Bots
                 "https://www.dailydot.com/wp-content/uploads/26c/b1/06e160103c1974fa0fb3d133e5d38bcf.jpg",
                 "https://yt3.ggpht.com/a/AATXAJycOI5UU75wO5_Rz_k-FUCuILJo6PqfWAS-Yg=s900-c-k-c0xffffffff-no-rj-mo",
                 "https://i.pinimg.com/736x/fc/bf/98/fcbf98ece06d0b04dd787a7e01993923.jpg",
-                "https://www.factinate.com/wp-content/uploads/2018/06/30-32.jpg"
+                "https://www.factinate.com/wp-content/uploads/2018/06/30-32.jpg",
+                "https://wallpapercave.com/wp/wp2709333.jpg",
+                "https://d13ezvd6yrslxm.cloudfront.net/wp/wp-content/images/kermit-the-frog.jpg",
+                "https://muppetmindset.files.wordpress.com/2016/02/kermit-poncho.jpg",
+                "https://m.media-amazon.com/images/M/MV5BODRkNWUyMmYtMDhmYS00M2VmLWI3M2EtNjM1NmVmZDkwMDQxXkEyXkFqcGdeQXVyMjUyNDk2ODc@._V1_.jpg"
             };
             Random random = new Random();
             int index = random.Next(AllPhohtos.Count);
