@@ -25,15 +25,15 @@ namespace Microsoft.BotBuilderSamples.Bots
                     CSharpCompiler.NowTask = NewTask;
                     break;
                 case "/step_by_step":
-                    string step = "🔹 Step-by-step instruction 🔹\r\n 1. First of all, write /random, after which you will receive the task.\r\n 2. Carefully read the condition, input parameters, and output data.\r\n 3. Write the code in Visual Studio or any other program that supports C#. Check that the code runs accurately and that it works correctly.\r\n 4. Send the bot /code and after his response 'Input your code' copy the entire code you have written (do not forget the using directives) and send it. \r\n5. Wait for an answer. Testing may take a while, so take your time. \r\n6. Look at the answer you received. If you forget about symbols, then call /abbreviations. \r\n7. Relax or continue solving problems (you can call /mood and watch Kermit's pictures)";
+                    string step = "🔹 Step-by-step instruction 🔹%0A 1. First of all, write /random, after which you will receive the task.%0A 2. Carefully read the condition, input parameters, and output data.%0A 3. Write the code in Visual Studio or any other program that supports C#. Check that the code runs accurately and that it works correctly.%0A 4. Send the bot /code and after his response 'Input your code' copy the entire code you have written (do not forget the using directives) and send it.%0A5. Wait for an answer. Testing may take a while, so take your time.%0A6. Look at the answer you received. If you forget about symbols, then call /abbreviations.%0A7. Relax or continue solving problems (you can call /mood and watch Kermit's pictures)";
                     await turnContext.SendActivityAsync(step);
                     break;
                 case "/abbreviations":
-                    string abbrev = "🔹 All abbreviations 🔹\r\n CE - Compilation Error (check that you have not lost the semicolon anywhere, that your code has been copied in full, with all namespaces, classes and using). \r\n  WA i - Wrong Answer on ‘i’ test (then the result of the program and the answer that should have been written).\r\n Good - Everything is great, you have completed the task correctly and passed all the tests.";
+                    string abbrev = "🔹 All abbreviations 🔹%0A CE - Compilation Error (check that you have not lost the semicolon anywhere, that your code has been copied in full, with all namespaces, classes and using). %0A WA i - Wrong Answer on ‘i’ test (then the result of the program and the answer that should have been written).%0A Good - Everything is great, you have completed the task correctly and passed all the tests.";
                     await turnContext.SendActivityAsync(abbrev);
                     break;
                 case "/help":
-                    string helper = "/random – random task \r\n/code - send the code to check it \r\n/mood - shows a picture of Kermit\r\n/step_by_step – shows step-by-step instruction \r\n/abbreviations – transcripts of the bot's responses ";
+                    string helper = "/random – random task %0A/code - send the code to check it %0A/mood - shows a picture of Kermit%0A/step_by_step – shows step-by-step instruction %0A/abbreviations – transcripts of the bot's responses ";
                     await turnContext.SendActivityAsync(helper);
                     break;
                 case "/mood":
