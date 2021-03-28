@@ -24,6 +24,10 @@ namespace Microsoft.BotBuilderSamples.Bots
                     result = NewTask.Condition;
                     CSharpCompiler.NowTask = NewTask;
                     break;
+                case "/start":
+                    var welcome = "Hello dear friend!" + Environment.NewLine + "This bot will help you to learn C#. " + Environment.NewLine + "Call /help to see all commands";
+                    await turnContext.SendActivityAsync(welcome);
+                    break;
                 case "/step_by_step":
                     string step = "🔹 Step-by-step instruction 🔹%0A 1. First of all, write /random, after which you will receive the task.%0A 2. Carefully read the condition, input parameters, and output data.%0A 3. Write the code in Visual Studio or any other program that supports C#. Check that the code runs accurately and that it works correctly.%0A 4. Send the bot /code and after his response 'Input your code' copy the entire code you have written (do not forget the using directives) and send it.%0A5. Wait for an answer. Testing may take a while, so take your time.%0A6. Look at the answer you received. If you forget about symbols, then call /abbreviations.%0A7. Relax or continue solving problems (you can call /mood and watch Kermit's pictures)";
                     await turnContext.SendActivityAsync(step);
