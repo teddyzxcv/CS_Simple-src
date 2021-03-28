@@ -25,19 +25,19 @@ namespace Microsoft.BotBuilderSamples.Bots
                     CSharpCompiler.NowTask = NewTask;
                     break;
                 case "/start":
-                    var welcome = "Hello dear friend!" + Environment.NewLine + "This bot will help you to learn C#. " + Environment.NewLine + "Call /help to see all commands";
+                    var welcome = "Hello dear friend!/n/n This bot will help you to learn C#. /n/n Call /help to see all commands";
                     await turnContext.SendActivityAsync(welcome);
                     break;
                 case "/step_by_step":
-                    string step = "🔹 Step-by-step instruction 🔹%0A 1. First of all, write /random, after which you will receive the task.%0A 2. Carefully read the condition, input parameters, and output data.%0A 3. Write the code in Visual Studio or any other program that supports C#. Check that the code runs accurately and that it works correctly.%0A 4. Send the bot /code and after his response 'Input your code' copy the entire code you have written (do not forget the using directives) and send it.%0A5. Wait for an answer. Testing may take a while, so take your time.%0A6. Look at the answer you received. If you forget about symbols, then call /abbreviations.%0A7. Relax or continue solving problems (you can call /mood and watch Kermit's pictures)";
+                    string step = "🔹 Step-by-step instruction 🔹/n/n 1. First of all, write /random, after which you will receive the task./n/n 2. Carefully read the condition, input parameters, and output data./n/n 3. Write the code in Visual Studio or any other program that supports C#. Check that the code runs accurately and that it works correctly./n/n 4. Send the bot /code and after his response 'Input your code' copy the entire code you have written (do not forget the using directives) and send it./n/n5. Wait for an answer. Testing may take a while, so take your time./n/n6. Look at the answer you received. If you forget about symbols, then call /abbreviations./n/n7. Relax or continue solving problems (you can call /mood and watch Kermit's pictures)";
                     await turnContext.SendActivityAsync(step);
                     break;
                 case "/abbreviations":
-                    string abbrev = "🔹 All abbreviations 🔹%0A CE - Compilation Error (check that you have not lost the semicolon anywhere, that your code has been copied in full, with all namespaces, classes and using). %0A WA i - Wrong Answer on ‘i’ test (then the result of the program and the answer that should have been written).%0A Good - Everything is great, you have completed the task correctly and passed all the tests.";
+                    string abbrev = "🔹 All abbreviations 🔹/n/n CE - Compilation Error (check that you have not lost the semicolon anywhere, that your code has been copied in full, with all namespaces, classes and using). /n/n WA i - Wrong Answer on ‘i’ test (then the result of the program and the answer that should have been written)./n/n Good - Everything is great, you have completed the task correctly and passed all the tests.";
                     await turnContext.SendActivityAsync(abbrev);
                     break;
                 case "/help":
-                    string helper = "/random – random task %0A/code - send the code to check it %0A/mood - shows a picture of Kermit%0A/step_by_step – shows step-by-step instruction %0A/abbreviations – transcripts of the bot's responses ";
+                    string helper = "/random – random task /n/n/code - send the code to check it /n/n/mood - shows a picture of Kermit/n/n/step_by_step – shows step-by-step instruction /n/n/abbreviations – transcripts of the bot's responses ";
                     await turnContext.SendActivityAsync(helper);
                     break;
                 case "/mood":
@@ -69,7 +69,7 @@ namespace Microsoft.BotBuilderSamples.Bots
 
         protected override async Task OnMembersAddedAsync(IList<ChannelAccount> membersAdded, ITurnContext<IConversationUpdateActivity> turnContext, CancellationToken cancellationToken)
         {
-            var welcomeText = "Hello dear friend!" + Environment.NewLine + "This bot will help you to learn C#. " + Environment.NewLine + "Call /help to see all commands";
+            var welcomeText = "Hello dear friend! /n/n This bot will help you to learn C#. /n/n Call /help to see all commands";
             var reply = MessageFactory.Text(welcomeText, welcomeText);
             var PhotoAttach = new Attachment()
             {
